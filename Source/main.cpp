@@ -110,15 +110,63 @@ void GameplayBehavior(entt::registry& registry)
 	std::shared_ptr<const GameConfig> config = registry.get<UTIL::Config>(
 		registry.view<UTIL::Config>().front()).gameConfig;
 
+	auto& modelManager = registry.get<DRAW::ModelManager>(registry.view<DRAW::ModelManager>().front());
+
 	// Create the input objects
 	auto input = registry.create();
 	registry.emplace<UTIL::Input>(input);
-	
+
 	// Seed the rand
 	unsigned int time = std::chrono::steady_clock::now().time_since_epoch().count();
 	srand(time);
-}
 
+	// Create the player entity
+	auto playerEntity = registry.create();
+	// Create the enemy entity 
+	auto enemyEntity = registry.create();
+
+	registry.emplace<GAME::Player>(playerEntity);
+	registry.emplace<GAME::Transform>(playerEntity, GAME::Transform{});
+	std::string playerModelName = (*config).at("Player").at("model").as<std::string>();
+	auto& playerMeshCollection = modelManager.GetCollection(playerModelName);
+
+	auto& playerCollection = registry.emplace<DRAW::MeshCollection>(playerEntity);
+
+	// Fill out the Player's MeshCollection
+	for (const auto& mesh : playerMeshCollection.meshes) {
+		auto meshEntity = registry.create();
+		registry.emplace<DRAW::GPUInstance>(meshEntity, registry.get<DRAW::GPUInstance>(mesh));
+		registry.emplace<DRAW::GeometryData>(meshEntity, registry.get<DRAW::GeometryData>(mesh));
+		playerCollection.meshes.push_back(meshEntity);
+	}
+
+	// Set the Player's initial transform
+	if (!playerCollection.meshes.empty()) {
+		auto& playerTransform = registry.get<GAME::Transform>(playerEntity);
+		playerTransform.matrix = registry.get<DRAW::GPUInstance>(playerCollection.meshes[0]).transform;
+	}
+
+	registry.emplace<GAME::Enemy>(enemyEntity); 
+	registry.emplace<GAME::Transform>(enemyEntity, GAME::Transform{}); 
+	std::string enemyModelName = (*config).at("Enemy1").at("model").as<std::string>();  
+	auto& enemyMeshCollection = modelManager.GetCollection(enemyModelName); 
+
+	auto& enemyCollection = registry.emplace<DRAW::MeshCollection>(enemyEntity); 
+
+	//  Enemy's MeshCollection
+	for (const auto& mesh : enemyMeshCollection.meshes) {
+		auto meshEntity = registry.create(); 
+		registry.emplace<DRAW::GPUInstance>(meshEntity, registry.get<DRAW::GPUInstance>(mesh)); 
+		registry.emplace<DRAW::GeometryData>(meshEntity, registry.get<DRAW::GeometryData>(mesh)); 
+		enemyCollection.meshes.push_back(meshEntity); 
+	}
+
+	// Enemy's initial transform
+	if (!enemyCollection.meshes.empty()) {
+		auto& enemyTransform = registry.get<GAME::Transform>(enemyEntity);
+		enemyTransform.matrix = registry.get<DRAW::GPUInstance>(enemyCollection.meshes[0]).transform;
+	}
+}
 // This function will be called by the main loop to update the main loop
 // It will be responsible for updating any created windows and handling any input
 void MainLoopBehavior(entt::registry& registry)
