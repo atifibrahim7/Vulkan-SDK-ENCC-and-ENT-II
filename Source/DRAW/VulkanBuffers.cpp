@@ -2,6 +2,7 @@
 #include "DrawComponents.h"
 #include "../CCL.h"
 #include "ModelManager.cpp"
+#include "../GAME/GameComponents.h"
 namespace DRAW
 {
 	void Destroy_MeshCollection(entt::registry& registry, entt::entity entity)
@@ -293,24 +294,16 @@ namespace DRAW
 			log.LogCategorized("ERROR", "CPULevel component not found when constructing GPULevel");
 			return;
 		}
-		// Vertex Buffer
-   // Emplace VulkanVertexBuffer component
 		registry.emplace<VulkanVertexBuffer>(entity); 
 
-		// Emplace vertex data
 		registry.emplace<std::vector<H2B::VERTEX>>(entity, cpuLevel->levelData.levelVertices);
 
-		// Patch to update the vertex buffer
 		registry.patch<VulkanVertexBuffer>(entity);
 
-		// Index Buffer
-		// Emplace VulkanIndexBuffer component
 		registry.emplace<VulkanIndexBuffer>(entity);
 
-		// Emplace index data
 		registry.emplace<std::vector<unsigned int>>(entity, cpuLevel->levelData.levelIndices);
 
-		// Patch to update the index buffer
 		registry.patch<VulkanIndexBuffer>(entity);
 		
 		// Part 1c
@@ -330,7 +323,6 @@ namespace DRAW
 		{
 			const auto& model = cpuLevel->levelData.levelModels[blenderObject.modelIndex];
 
-			// Iterate through all meshes in the model
 			for (unsigned int meshIndex = 0; meshIndex < model.meshCount; ++meshIndex)
 			{
 				const auto& mesh = cpuLevel->levelData.levelMeshes[model.meshStart + meshIndex];
@@ -338,22 +330,18 @@ namespace DRAW
 				{
 					MeshCollection collection;
 
-					// Iterate through all meshes in the model
 					for (unsigned int meshIndex = 0; meshIndex < model.meshCount; ++meshIndex)
 					{
 						const auto& mesh = cpuLevel->levelData.levelMeshes[model.meshStart + meshIndex];
 
-						// Create a new entity for this mesh
 						auto meshEntity = registry.create();
 
-						// Add GeometryData component
 						registry.emplace<GeometryData>(meshEntity, GeometryData{
 							static_cast<unsigned int>(model.indexStart + mesh.drawInfo.indexOffset),
 							mesh.drawInfo.indexCount,
 							static_cast<unsigned int>(model.vertexStart)
 							});
 
-						// Add GPUInstance component
 						registry.emplace<GPUInstance>(meshEntity, GPUInstance{
 							cpuLevel->levelData.levelTransforms[blenderObject.transformIndex],
 							cpuLevel->levelData.levelMaterials[model.materialStart + mesh.materialIndex].attrib
@@ -438,6 +426,8 @@ namespace DRAW
 		registry.on_construct<GPULevel>().connect<Construct_GPULevel>();
 
 		registry.on_destroy<ModelManager>().connect<Destroy_MeshCollection>();
+		 registry.on_update<GAME::GameManager>().connect<&GAME::GameManager::Update>();           //add & if not working 
+		 registry.on_update<GAME::Player>().connect<&GAME::Player::Update>();
 	}
 
 } // namespace DRAW
